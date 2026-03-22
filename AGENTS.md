@@ -2,8 +2,8 @@
 
 ## Projects
 - `chatbot/` = Python FastAPI backend
-- `netbot-ui/` = main React UI
-- `chatbot-ui/` = React chatbot widget
+- `netbot-ui/` = main React UI, this is frontend for `chatbot/`
+- `chatbot-ui/` = React chatbot widget that uses api `/chats/events` in `chatbot/` 
 - `chatbot/aws/persistance.yaml` = AWS CloudFormation template for chatbot infrastructure
 
 ## Rules
