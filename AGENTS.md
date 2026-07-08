@@ -1,33 +1,68 @@
 # Workspace guide
 
+## Workspace layout
+- Current workspace root: `/Users/alikianzadeh/git/chatbot-parent`
+- The application projects are sibling directories under `/Users/alikianzadeh/git/`, not nested within each other. This allows for clear separation of concerns and easier management of each project.
+
 ## Projects
-- `chatbot/` = Python FastAPI backend
-- `netbot-ui/` = main React UI, this is frontend for `chatbot/`
-- `chatbot-ui/` = React chatbot widget that uses api `/chats/events` in `chatbot/` 
-- `chatbot/aws/persistance.yaml` = AWS CloudFormation template for chatbot infrastructure
+- `/Users/alikianzadeh/git/chatbot/` = Python FastAPI backend
+- `/Users/alikianzadeh/git/netbot-ui/` = main React UI, this is frontend for `chatbot/`
+- `/Users/alikianzadeh/git/chatbot-ui/` = React chatbot widget that uses api `/chats/events` in `chatbot/`
+- `/Users/alikianzadeh/git/chatbot/aws/persistance.yaml` = AWS CloudFormation template for chatbot infrastructure
+- `/Users/alikianzadeh/git/s3-sync/` = This is AWS SAM Project, includes AWS lambadas behind AWS API Gateway, user upload files using netbot-ui app on Knowledgebase, files upload directly to s3 with a presigned url and then and event bridge event trigger sync-file lambda to upload file to vendor like VoiceFlow. 
+
 
 ## Rules
 - Keep changes scoped to the correct project.
 - If backend API contracts change in `chatbot`, update clients in `netbot-ui` and/or `chatbot-ui` when needed.
 - Do not mix frontend code between `netbot-ui` and `chatbot-ui`.
 - Prefer minimal edits.
+- We are processing migrating s3-sync project into chatbot project
 - Before major edits, explain the plan briefly.
 
 ## Commands
 ### Backend
-- `cd chatbot && uvicorn app.main:app --reload`
+- `cd /Users/alikianzadeh/git/chatbot && uvicorn app.main:app --reload`
 
 ### Main frontend
-- `cd netbot-ui && npm install`
-- `cd netbot-ui && npm run dev`
+- `cd /Users/alikianzadeh/git/netbot-ui && npm install`
+- `cd /Users/alikianzadeh/git/netbot-ui && npm run dev`
 
 ### Widget frontend
-- `cd chatbot-ui && npm install`
-- `cd chatbot-ui && npm run build:widget:dev`
+- `cd /Users/alikianzadeh/git/chatbot-ui && npm install`
+- `cd /Users/alikianzadeh/git/chatbot-ui && npm run build:widget:dev`
 
 ## Notes
 - `chatbot-ui` is the chatbot widget project.
 - Use `npm run build:widget:dev` when validating widget build changes.
+
+## Live agent WebSocket background
+- Live agent chat uses an API Gateway WebSocket API plus the FastAPI backend.
+- The browser widget in `/Users/alikianzadeh/git/chatbot-ui/` connects to the WebSocket URL from `WSS_CHAT_URL`.
+- The dashboard agent conversation UI in `/Users/alikianzadeh/git/netbot-ui/` connects to the WebSocket URL from `REACT_APP_WEBSOCKET_API_URL`.
+- When a socket opens, the browser sends a small registration message to the WebSocket Lambda:
+  - Widget/user side sends `{"sender":"user","conversationId":"..."}`
+  - Dashboard/agent side sends `{"sender":"agent","conversationId":"..."}`
+- The WebSocket Lambda is currently in `/Users/alikianzadeh/git/s3-sync/chat/app.py`. It receives `$default` messages and writes the API Gateway `connectionId` into the conversation DynamoDB item:
+  - `userConnectionId` for widget/user sockets
+  - `agentConnectionId` for dashboard/agent sockets
+- The backend sends live messages through `/Users/alikianzadeh/git/chatbot/app/service/MessageService.py`, using the ECS env var `APIGATEWAY_DOMAIN_NAME` as the API Gateway Management API endpoint.
+- The live-agent HTTP endpoints are in `chatbot/app/api/public_conversation.py` and `chatbot/app/controller/conversationController.py`:
+  - `POST /conversations/{conversationId}/agent` requests handoff.
+  - `POST /conversations/{conversationId}/join` marks an agent joined.
+  - `POST /conversations/{conversationId}/messages` stores a message and forwards it over WebSocket to the target connection.
+- Important production pitfall: all three places must use the same WebSocket API/custom domain:
+  - Widget `WSS_CHAT_URL`
+  - Dashboard `REACT_APP_WEBSOCKET_API_URL`
+  - Backend ECS `APIGATEWAY_DOMAIN_NAME`
+- Current production WebSocket domain should be `chat.netbot.jp`. `chat.chishiki.link` is a separate older WebSocket API from the `sync-s3-vs` stack. If frontend connects to `chat.netbot.jp` but backend posts to `chat.chishiki.link`, HTTP requests can return `200` while the other browser never receives the live-agent message.
+- The backend ECS value is passed by `/Users/alikianzadeh/git/chatbot/.github/workflows/main.yml` as the CloudFormation parameter `ApiGatewayDomainName`. Keep the parameter casing exact.
+- When debugging live-agent delivery, check these first:
+  - Browser Network tab has a WebSocket `101` connection to the expected domain.
+  - CloudWatch WebSocket Lambda logs show both `sender:"user"` and `sender:"agent"` registration for the same `conversationId`.
+  - DynamoDB conversation row contains `userConnectionId` and `agentConnectionId`.
+  - ECS task env has `APIGATEWAY_DOMAIN_NAME=chat.netbot.jp`.
+  - Backend logs do not show missing `ConnectionId` or posting to the wrong API Gateway domain.
 
 ## Deployment
 - `chatbot/ecs-cloudformation.yml` deploys the backend to ECS Fargate as two separate services in the same ECS cluster.
