@@ -66,6 +66,31 @@ adding or changing upload/sync functionality, check both projects to see where
 the relevant code currently lives, and ask if ownership is unclear. Update this
 section when the migration status changes.
 
+## Support ticket process
+- Support tickets are part of the `chatbot` backend agent flow, not the live
+  agent WebSocket flow. Source of truth: `chatbot/app/vendor/NetBot.py`,
+  `chatbot/app/controller/SupportTicketController.py`, and
+  `chatbot/app/model/SupportTicketModel.py`.
+- Agent configuration includes `supportTicketPrompt`. It is persisted on
+  `AgentModel.supportTicketPrompt`, exposed by `app/view/Agent.py`, and updated
+  through `app/controller/AgentController.py`.
+- Admin configuration UI: `netbot-ui/src/components/AdminAgentForm.js`.
+  Customer configuration UI: `netbot-ui/src/components/Agents.js`.
+- Runtime behavior: `NetBot` uses the agent's `supportTicketPrompt` to classify
+  whether the user intent is `normal`, `offer_ticket`, or `open_ticket`.
+- The bot offers a ticket when the user appears blocked or dissatisfied. It
+  opens a ticket when the user explicitly asks for one or accepts the offer.
+- A requester email is required before creation. If no email is present,
+  conversation state is set to `supportTicketState="awaiting_email"` and the
+  issue summary is kept in `supportTicketIssueSummary` until the user provides
+  an email.
+- Created tickets are stored in `${EnvName}-support-ticket`. The support-ticket
+  table is defined in `chatbot/aws/persistence.yaml`; ticket numbers are
+  per-client sequence IDs backed by a `__counter__` item.
+- Customer routes are mounted at `/private/support-tickets`; admin routes are
+  mounted at `/admin/clients/{clientId}/support-tickets`. Verify route files in
+  `chatbot/app/api/` before changing clients.
+
 ## Rules
 - Keep changes scoped to the correct project.
 - If backend API contracts change in `chatbot`, update clients in `netbot-ui`

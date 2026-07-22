@@ -36,6 +36,20 @@
 - `chatbot-ui` is the chatbot widget project.
 - Use `npm run build:widget:dev` when validating widget build changes.
 
+## Support ticket process
+- Support tickets are created by the backend chatbot agent flow in `/Users/alikianzadeh/git/chatbot/app/vendor/NetBot.py`.
+- Each agent can configure `supportTicketPrompt`; this controls when the agent should offer or open a support ticket.
+- Admins edit the ticket prompt in `/Users/alikianzadeh/git/netbot-ui/src/components/AdminAgentForm.js`.
+- Customers edit the same ticket prompt in `/Users/alikianzadeh/git/netbot-ui/src/components/Agents.js`.
+- The backend stores the prompt on `AgentModel.supportTicketPrompt` and exposes it through `app/view/Agent.py` and `app/controller/AgentController.py`.
+- When a user asks for a ticket, accepts an offered ticket, or appears blocked/frustrated, `NetBot` classifies the intent with the agent's ticket prompt.
+- A ticket is only created after an email address is available. If the user has not provided one, the conversation is marked `supportTicketState="awaiting_email"` and the bot asks for a follow-up email.
+- Created tickets are stored in the DynamoDB table `${EnvName}-support-ticket` using `/Users/alikianzadeh/git/chatbot/app/model/SupportTicketModel.py`.
+- Ticket IDs are per-client numeric sequence values stored with a `__counter__` item in the support-ticket table.
+- Private customer ticket lookup routes are mounted at `/private/support-tickets`.
+- Admin ticket lookup routes are mounted at `/admin/clients/{clientId}/support-tickets`.
+- Support-ticket infrastructure lives in `/Users/alikianzadeh/git/chatbot/aws/persistence.yaml`.
+
 ## Live agent WebSocket background
 - Live agent chat uses an API Gateway WebSocket API plus the FastAPI backend.
 - The browser widget in `/Users/alikianzadeh/git/chatbot-ui/` connects to the WebSocket URL from `WSS_CHAT_URL`.
@@ -55,11 +69,16 @@
   - Widget `WSS_CHAT_URL`
   - Dashboard `REACT_APP_WEBSOCKET_API_URL`
   - Backend ECS `APIGATEWAY_DOMAIN_NAME`
+- Important production pitfall: the WebSocket Lambda must also write to the same environment conversation table as the backend:
+  - Prod Lambda env `DYNAMODB_CONVERSATION_TABLE` must be `chatbot-prod-conversation`.
+  - Dev Lambda env `DYNAMODB_CONVERSATION_TABLE` should be `chatbot-dev-conversation`.
+  - `/Users/alikianzadeh/git/s3-sync/samconfig.toml` must pass `ConversationTable=chatbot-prod-conversation` for prod deploys; otherwise `s3-sync/template.yaml` falls back to its dev default.
 - Current production WebSocket domain should be `chat.netbot.jp`. `chat.chishiki.link` is a separate older WebSocket API from the `sync-s3-vs` stack. If frontend connects to `chat.netbot.jp` but backend posts to `chat.chishiki.link`, HTTP requests can return `200` while the other browser never receives the live-agent message.
 - The backend ECS value is passed by `/Users/alikianzadeh/git/chatbot/.github/workflows/main.yml` as the CloudFormation parameter `ApiGatewayDomainName`. Keep the parameter casing exact.
 - When debugging live-agent delivery, check these first:
   - Browser Network tab has a WebSocket `101` connection to the expected domain.
   - CloudWatch WebSocket Lambda logs show both `sender:"user"` and `sender:"agent"` registration for the same `conversationId`.
+  - WebSocket Lambda env has `DYNAMODB_CONVERSATION_TABLE=chatbot-prod-conversation` in prod.
   - DynamoDB conversation row contains `userConnectionId` and `agentConnectionId`.
   - ECS task env has `APIGATEWAY_DOMAIN_NAME=chat.netbot.jp`.
   - Backend logs do not show missing `ConnectionId` or posting to the wrong API Gateway domain.
