@@ -3,29 +3,31 @@
 ```mermaid
 %%{init: {"theme": "base", "themeVariables": {"lineColor": "#0f172a", "edgeLabelBackground": "#f8fafc", "clusterBkg": "#f8fafc", "clusterBorder": "#64748b"}}}%%
 flowchart LR
-    AdminUser(["Admin User"])
-    PublicUser(["Public User"])
+    subgraph Architecture["NetBot Architecture"]
+        AdminUser(["Admin User"])
+        PublicUser(["Public User"])
 
-    subgraph AWS["AWS — Japan Region (ap-northeast-1)"]
-        Amplify["AWS Amplify<br/>Dashboard + Widget Hosting"]
-        ReactUI["React UI<br/>Admin Dashboard"]
-        Widget["React Chat Widget<br/>Customer Website"]
-        Cognito["Amazon Cognito<br/>Authentication"]
-        ALB["Application Load Balancer"]
+        subgraph AWS["AWS — Japan Region (ap-northeast-1)"]
+            Amplify["AWS Amplify<br/>Dashboard + Widget Hosting"]
+            ReactUI["React UI<br/>Admin Dashboard"]
+            Widget["React Chat Widget<br/>Customer Website"]
+            Cognito["Amazon Cognito<br/>Authentication"]
+            ALB["Application Load Balancer"]
 
-        subgraph ECS["Amazon ECS Fargate"]
-            API["FastAPI Backend"]
-            Processor["Document Processor"]
+            subgraph ECS["Amazon ECS Fargate"]
+                API["FastAPI Backend"]
+                Processor["Document Processor"]
+            end
+
+            S3[("Amazon S3<br/>Documents")]
+            SQS["Amazon SQS<br/>Processing Queue"]
+            DynamoDB[("Amazon DynamoDB<br/>Persistence")]
+            Bedrock["Amazon Bedrock<br/>LLM + Embeddings"]
         end
 
-        S3[("Amazon S3<br/>Documents")]
-        SQS["Amazon SQS<br/>Processing Queue"]
-        DynamoDB[("Amazon DynamoDB<br/>Persistence")]
-        Bedrock["Amazon Bedrock<br/>LLM + Embeddings"]
-    end
-
-    subgraph External["External Service"]
-        Gemini["Google Gemini<br/>OCR + Chunking"]
+        subgraph External["External Service"]
+            Gemini["Google Gemini<br/>OCR + Chunking"]
+        end
     end
 
     AdminUser -->|"Manage agents & knowledge base"| ReactUI
@@ -78,6 +80,7 @@ flowchart LR
     class Bedrock ai
     class Gemini external
 
+    style Architecture fill:#ffffff,stroke:#475569,stroke-width:4px,color:#0f172a
     style AWS fill:#f8fafc,stroke:#f59e0b,stroke-width:3px,color:#0f172a
     style ECS fill:#faf5ff,stroke:#8b5cf6,stroke-width:2px,color:#0f172a
     style External fill:#fff7ed,stroke:#ef4444,stroke-width:2px,stroke-dasharray:5 5,color:#0f172a
