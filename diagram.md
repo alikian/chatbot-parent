@@ -1,6 +1,7 @@
 # NetBot Architecture
 
 ```mermaid
+%%{init: {"theme": "base", "themeVariables": {"lineColor": "#0f172a", "edgeLabelBackground": "#f8fafc", "clusterBkg": "#f8fafc", "clusterBorder": "#64748b"}}}%%
 flowchart LR
     AdminUser(["Admin User"])
     PublicUser(["Public User"])
@@ -77,9 +78,10 @@ flowchart LR
     class Bedrock ai
     class Gemini external
 
-    style AWS fill:#f8fafc,stroke:#f59e0b,stroke-width:3px
-    style ECS fill:#faf5ff,stroke:#8b5cf6,stroke-width:2px
-    style External fill:#fff7ed,stroke:#ef4444,stroke-width:2px,stroke-dasharray:5 5
+    style AWS fill:#f8fafc,stroke:#f59e0b,stroke-width:3px,color:#0f172a
+    style ECS fill:#faf5ff,stroke:#8b5cf6,stroke-width:2px,color:#0f172a
+    style External fill:#fff7ed,stroke:#ef4444,stroke-width:2px,stroke-dasharray:5 5,color:#0f172a
+    linkStyle 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17 stroke:#0f172a,stroke-width:3px,color:#0f172a
 ```
 
 > [!IMPORTANT]
