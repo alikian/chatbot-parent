@@ -20,6 +20,17 @@
 - We are processing migrating s3-sync project into chatbot project
 - Before major edits, explain the plan briefly.
 
+## Japan data residency (hard requirement)
+- NetBot promises customers that their data stays in Japan. Treat this as a contractual requirement and a release blocker, not a preference.
+- Customer, production, uploaded, or potentially sensitive data must never be stored, processed, transmitted, logged, backed up, or routed outside Japan.
+- This restriction applies to every service and subprocessor, including OCR, LLM and embedding providers, object storage, databases, vector stores, queues, logs, monitoring, analytics, support tools, and temporary processing.
+- Before sending document content or customer data to any external API, verify from current provider documentation and the actual resource configuration that both storage and processing occur in a Japan region. A Japanese-capable model or a nearby Asia region is not sufficient.
+- Approved region identifiers must explicitly refer to Japan, such as AWS `ap-northeast-1` or Google Cloud `asia-northeast1`. Regions such as AWS `us-*`, Google `us`/`eu`, `asia-southeast1` (Singapore), and `asia-south1` (Mumbai) do not satisfy this requirement.
+- Never rely on a provider's default region. Region configuration must be explicit, validated at startup or deployment, and fail closed if missing, invalid, or non-Japan. Do not silently fall back to `us` or another region.
+- Treat all documents and datasets as residency-constrained by default, including evaluation fixtures. Synthetic or unquestionably public data may be processed outside Japan only after the user explicitly approves that specific exception.
+- Do not enable, create, test, or switch to a non-Japan processor or endpoint for production workflows. Experimental work must remain isolated on a separate branch and must not be able to receive production data.
+- Before release, document and verify the complete data flow, including subprocessors and failure paths. If Japan-region processing cannot be verified, stop and raise the issue instead of deploying or running the test.
+
 ## Commands
 ### Backend
 - `cd /Users/alikianzadeh/git/chatbot && uvicorn app.main:app --reload`
